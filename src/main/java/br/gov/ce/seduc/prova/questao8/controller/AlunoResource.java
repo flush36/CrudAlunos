@@ -1,6 +1,7 @@
 package br.gov.ce.seduc.prova.questao8.controller;
 
 import java.util.List;
+import java.util.Optional;
 
 import javax.validation.Valid;
 
@@ -20,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import br.gov.ce.seduc.prova.questao8.entity.Aluno;
 import br.gov.ce.seduc.prova.questao8.service.AlunoService;
+import javassist.NotFoundException;
 import lombok.AllArgsConstructor;
 
 @RestController
@@ -37,27 +39,30 @@ public class AlunoResource {
 	
 	@DeleteMapping("{id}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void deletar(@PathVariable Integer id) {
-		alunoService.getById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+	public void deletar(@PathVariable Integer id) throws NotFoundException {
 		alunoService.deletar(id);
     }
 	
 	@PutMapping("/{id}")
-	public ResponseEntity<Aluno> atualizar(@Valid @PathVariable Integer id, @RequestBody Aluno aluno) {
-		alunoService.getById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+	public ResponseEntity<Aluno> atualizar(@Valid @PathVariable Integer id, @RequestBody Aluno aluno) throws NotFoundException {
 		return ResponseEntity.ok(alunoService.atualizar(id, aluno));
 	}
 	
 	@GetMapping("buscar-todos")
 	public ResponseEntity<List<Aluno>> buscarTodos() {
-		return ResponseEntity.ok(alunoService.listar());
+		List<Aluno> alunos = alunoService.listar();
+		HttpStatus status = alunos.isEmpty() ? HttpStatus.NO_CONTENT : HttpStatus.OK;
+		return ResponseEntity.status(status).body(alunos);
 	}
 	
 	@GetMapping("buscar-por-matricula")
 	public ResponseEntity<Aluno> buscarAlunoPorMatricula(@RequestParam("matricula") String matricula) {
-		 Aluno aluno = alunoService.buscarPorMatricula(matricula)
-				 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NO_CONTENT));
-		 return ResponseEntity.ok(aluno);
+		
+		Optional<Aluno> aluno = alunoService.buscarPorMatricula(matricula);
+		if(aluno.isPresent())
+			return ResponseEntity.ok(aluno.get());
+		
+		throw new ResponseStatusException(HttpStatus.NO_CONTENT);
 	}
 	
 	

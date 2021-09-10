@@ -3,11 +3,12 @@ package br.gov.ce.seduc.prova.questao8.service;
 import java.util.List;
 import java.util.Optional;
 
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import br.gov.ce.seduc.prova.questao8.entity.Aluno;
+import br.gov.ce.seduc.prova.questao8.exception.custom.BusinessException;
 import br.gov.ce.seduc.prova.questao8.repository.AlunoRepository;
+import javassist.NotFoundException;
 import lombok.AllArgsConstructor;
 
 @Service
@@ -16,26 +17,26 @@ public class AlunoService {
 
 	private final AlunoRepository alunoRepository;
 	
-
-	private final ModelMapper modelMapper;
-	
 	public Optional<Aluno> getById(Integer id) {
 		return alunoRepository.findById(id);
 	}
 	
 	public Aluno salvar(Aluno aluno) {
+		Optional<Aluno> buscarPorMatricula = buscarPorMatricula(aluno.getMatricula());
+		if(buscarPorMatricula.isPresent())
+			throw new BusinessException("Já existe um aluno para esta matricula.");
+		
 		return alunoRepository.save(aluno);
 	}
 	
-	public Aluno atualizar(Integer id, Aluno aluno) {
-		Aluno alunoBD = alunoRepository.findById(id).get();
-		
-		Aluno atualizado = modelMapper.map(aluno, Aluno.class);
-		atualizado.setId(alunoBD.getId());
-		return alunoRepository.save(atualizado);
+	public Aluno atualizar(Integer id, Aluno aluno) throws NotFoundException {
+		validarPacienteExiste(id);
+		aluno.setId(id);
+		return alunoRepository.save(aluno);
 	}
 	
-	public void deletar(Integer id) {
+	public void deletar(Integer id) throws NotFoundException {
+		validarPacienteExiste(id);
 		alunoRepository.deleteById(id);
 	}
 	
@@ -45,5 +46,9 @@ public class AlunoService {
 	
 	public Optional<Aluno> buscarPorMatricula(String matricula) {
 		return alunoRepository.findByMatricula(matricula);
+	}
+	
+	private void validarPacienteExiste(Integer id) throws NotFoundException {
+		getById(id).orElseThrow(() ->  new NotFoundException("Paciente com id: " + id + " não encontrado."));
 	}
 }
